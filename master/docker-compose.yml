@@ -1,0 +1,143 @@
+version: '3.4'
+
+services:
+  transmission-openvpn:
+      image: haugene/transmission-openvpn
+      container_name: transmission
+      restart: ${RESTART_POLICY}
+      cap_add:
+          - NET_ADMIN
+      environment:
+          - OPENVPN_PROVIDER=NORDVPN
+          - NORDVPN_COUNTRY=SWITZERLAND
+          - NORDVPN_CATEGORY=P2P
+          - NORDVPN_PROTOCOL=tcp
+          - OPENVPN_USERNAME=${NORDVPN_ENCRYPTED_USER}
+          - OPENVPN_PASSWORD=${NORDVPN_ENCRYPTED_PASS}
+          - ENABLE_UFW=false
+          - CONFIG_MOD_PING=0
+          - OPENVPN_OPTS=--ping 10 --pull-filter ignore ping
+          - WEBPROXY_ENABLED=false
+          - TRANSMISSION_LOG_LEVEL=info
+      volumes:
+          - ${ROOT_CACHE_DIR}/downloads/torrents:/data
+          - ${ROOT_CONFIG_DIR}/transmission:/config
+      ports:
+        - ${TRANSMISSION_PORT}:9091
+      logging:
+          driver:
+              json-file
+          options:
+              max-size: 10m
+      networks:
+        media-bridge:
+          ipv4_address: ${TRANSMISSION_IP}
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    restart: ${RESTART_POLICY}
+    hostname: ${HOSTNAME}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT_CONFIG_DIR}/sabnzbd:/config
+      - ${ROOT_CACHE_DIR}/downloads:/downloads
+    ports:
+      - ${SABNZBD_PORT}:8080
+    networks:
+      media-bridge:
+        ipv4_address: ${SABNZBD_IP}
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: ${RESTART_POLICY}
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=${TZ}
+    ports:
+      - ${FLARESOLVERR_PORT}:8191
+    networks:
+      media-bridge:
+        ipv4_address: ${FLARESOLVERR_IP}
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: ${RESTART_POLICY}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT_CONFIG_DIR}/prowlarr:/config
+    ports:
+      - ${PROWLARR_PORT}:9696
+    networks:
+      media-bridge:
+        ipv4_address: ${PROWLARR_IP}
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: ${RESTART_POLICY}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT_CONFIG_DIR}/bazarr:/config
+      - ${MEDIA_DIR}/movies:/movies
+      - ${MEDIA_DIR}/tv:/tv
+    ports:
+      - ${BAZARR_PORT}:6767
+    networks:
+      media-bridge:
+        ipv4_address: ${BAZARR_IP}
+
+  sonarr:
+      image: lscr.io/linuxserver/sonarr:latest
+      container_name: sonarr
+      restart: ${RESTART_POLICY}
+      environment:
+          - PUID=${PUID}
+          - PGID=${PGID}
+      ports:
+          - ${SONARR_PORT}:8989
+      volumes:
+          - ${ROOT_CONFIG_DIR}/sonarr:/config
+          - ${ROOT_CACHE_DIR}/downloads:/downloads
+          - ${MEDIA_DIR}:/media
+          - ${ROOT_CACHE_DIR}/torrents/data/completed:/data/completed
+      networks:
+        media-bridge:
+          ipv4_address: ${SONARR_IP}
+
+  radarr:
+      image: lscr.io/linuxserver/radarr
+      container_name: radarr
+      restart: ${RESTART_POLICY}
+      environment:
+          - PUID=${PUID}
+          - PGID=${PGID}
+      ports:
+          - ${RADARR_PORT}:7878
+      volumes:
+          - ${ROOT_CONFIG_DIR}/radarr:/config
+          - ${ROOT_CACHE_DIR}/downloads/:/downloads
+          - ${MEDIA_DIR}:/media
+          - ${ROOT_CACHE_DIR}/torrents/data/completed:/data/completed
+      networks:
+        media-bridge:
+          ipv4_address: ${RADARR_IP}
+
+networks:
+  media-bridge:
+    name: media-bridge
+    driver: bridge
+    external: true
