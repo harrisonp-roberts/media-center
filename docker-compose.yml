@@ -1,29 +1,6 @@
 version: '3.4'
 
 services:
-  gluetun:
-    image: qmcgaw/gluetun
-    container_name: gluetun
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    ports: # Yeah this is kinda dirty and can lead to conflicts if multiple containers connecting to gluetun expose the same ports. Just run multiple gluetuns...
-      - ${PROWLARR_PORT}:9696 # Map the transmission port through gluetun instead of it's own service
-      # - 8888:8888/tcp # HTTP proxy
-      # - 8388:8388/tcp # Shadowsocks
-      # - 8388:8388/udp # Shadowsocks
-    environment:
-      - VPN_SERVICE_PROVIDER=nordvpn
-      - VPN_TYPE=openvpn
-      - OPENVPN_USER=${NORDVPN_ENCRYPTED_USER}
-      - OPENVPN_PASSWORD=${NORDVPN_ENCRYPTED_PASS}
-      - OPENVPN_PROTOCOL=tcp
-      - TZ=${TZ}
-    networks:
-        media-bridge:
-          ipv4_address: ${GLUETUN_IP}
-
   transmission-openvpn:
       image: haugene/transmission-openvpn
       container_name: transmission
@@ -31,6 +8,8 @@ services:
       cap_add:
           - NET_ADMIN
       environment:
+          - PUID=${PUID}
+          - PGID=${PGID}
           - OPENVPN_PROVIDER=NORDVPN
           - NORDVPN_COUNTRY=SWITZERLAND
           - NORDVPN_CATEGORY=P2P
@@ -92,7 +71,6 @@ services:
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
-    network_mode: service:gluetun
     restart: ${RESTART_POLICY}
     environment:
       - PUID=${PUID}
@@ -100,6 +78,11 @@ services:
       - TZ=${TZ}
     volumes:
       - ${ROOT_CONFIG_DIR}/prowlarr:/config
+    ports:
+      - ${PROWLARR_PORT}:9696
+    networks:
+      media-bridge:
+        ipv4_address: ${PROWLARR_IP}
 
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
@@ -154,6 +137,26 @@ services:
       networks:
         media-bridge:
           ipv4_address: ${RADARR_IP}
+
+  lidarr:
+      image: lscr.io/linuxserver/lidarr:latest
+      container_name: lidarr
+      restart: ${RESTART_POLICY}
+      environment:
+        - PUID=${PUID}
+        - PGID=${PGID}
+        - TZ=Etc/UTC
+      ports:
+        - ${LIDARR_PORT}:8686
+      volumes:
+        - ${ROOT_CONFIG_DIR}/lidarr:/config
+        - ${MEDIA_DIR}/music:/music #optional
+        - ${ROOT_CACHE_DIR}/downloads:/downloads #optional
+        - ${ROOT_CACHE_DIR}/downloads/torrents:/data
+      networks:
+        media-bridge:
+          ipv4_address: ${LIDARR_IP}
+
 
   subgen:
     container_name: subgen
