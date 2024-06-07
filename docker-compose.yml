@@ -155,6 +155,24 @@ services:
         media-bridge:
           ipv4_address: ${LIDARR_IP}
 
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    restart: unless-stopped
+    ports:
+      - ${READARR_PORT}:8787
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ${ROOT_CONFIG_DIR}/readarr:/config
+      - ${MEDIA_DIR}/books:/books #optional
+      - ${ROOT_CACHE_DIR}/downloads:/downloads #optional
+      - ${ROOT_CACHE_DIR}/downloads/torrents:/data
+    networks:
+        media-bridge:
+          ipv4_address: ${READARR_IP}
 
   subgen:
     container_name: subgen
