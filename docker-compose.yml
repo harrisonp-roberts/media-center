@@ -159,12 +159,12 @@ services:
     image: lscr.io/linuxserver/readarr:develop
     container_name: readarr
     restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=Etc/UTC
     ports:
       - ${READARR_PORT}:8787
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
     volumes:
       - ${ROOT_CONFIG_DIR}/readarr:/config
       - ${MEDIA_DIR}/books:/books #optional
@@ -173,7 +173,7 @@ services:
     networks:
         media-bridge:
           ipv4_address: ${READARR_IP}
-
+    
   subgen:
     container_name: subgen
     tty: true
